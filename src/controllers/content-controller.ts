@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 
 export async function getContentItems(req: Request, res: Response) {
@@ -193,6 +194,17 @@ export async function updateContentStatus(req: Request, res: Response) {
     });
   }
 }
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return value as Prisma.InputJsonValue;
+}
 export async function updateContentItem(req: Request, res: Response) {
   try {
     const id = req.params.id as string;
@@ -211,6 +223,27 @@ export async function updateContentItem(req: Request, res: Response) {
     if (!currentContentItem) {
       return res.status(404).json({
         message: "Content item not found",
+      });
+    }
+
+    const previousValue: Record<string, Prisma.InputJsonValue> = {};
+    const newValue: Record<string, Prisma.InputJsonValue> = {};
+
+    Object.keys(updateData).forEach((key) => {
+      const typedKey = key as keyof typeof currentContentItem;
+
+      const oldValue = currentContentItem[typedKey];
+      const newFieldValue = updateData[key];
+
+      if (String(oldValue) !== String(newFieldValue)) {
+        previousValue[key] = toJsonValue(oldValue);
+        newValue[key] = toJsonValue(newFieldValue);
+      }
+    });
+
+    if (Object.keys(newValue).length === 0) {
+      return res.status(400).json({
+        message: "No changes detected",
       });
     }
 
@@ -235,8 +268,8 @@ export async function updateContentItem(req: Request, res: Response) {
         entityId: updatedContentItem.id,
         contentItemId: updatedContentItem.id,
         action: "updated",
-        previousValue: currentContentItem,
-        newValue: updateData,
+        previousValue,
+        newValue,
         changedById,
       },
     });
