@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,4 +5,124 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  manager
+  contributor
+}
+
+enum ContentType {
+  post
+  video
+  reel
+  carousel
+}
+
+enum ContentStatus {
+  planned
+  in_progress
+  review
+  done
+  published
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+enum Platform {
+  LinkedIn
+  X
+  Instagram
+  TikTok
+  YouTube
+  Facebook
+}
+
+enum ActivityEntityType {
+  content
+  product
+}
+
+enum ActivityAction {
+  created
+  updated
+  status_changed
+  assigned
+  deleted
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      UserRole
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdContent  ContentItem[] @relation("CreatedContent")
+  assignedContent ContentItem[] @relation("AssignedContent")
+  activityLogs    ActivityLog[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  color       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contentItems ContentItem[]
+}
+
+model ContentItem {
+  id            String        @id @default(uuid())
+  title         String
+  description   String
+  type          ContentType
+  productId     String
+  status        ContentStatus @default(planned)
+  platforms     Platform[]
+  scheduledDate DateTime?
+  publishedDate DateTime?
+  createdById   String
+  assignedToId  String
+  priority      Priority
+  tags          String[]
+  mediaUrl      String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  product    Product @relation(fields: [productId], references: [id])
+  createdBy  User    @relation("CreatedContent", fields: [createdById], references: [id])
+  assignedTo User    @relation("AssignedContent", fields: [assignedToId], references: [id])
+
+  activityLogs ActivityLog[]
+
+  @@index([productId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id            String             @id @default(uuid())
+  entityType    ActivityEntityType
+  entityId      String
+  contentItemId String?
+  action        ActivityAction
+  previousValue Json?
+  newValue      Json?
+  changedById   String
+  timestamp     DateTime           @default(now())
+
+  changedBy   User         @relation(fields: [changedById], references: [id])
+  contentItem ContentItem?  @relation(fields: [contentItemId], references: [id])
 }
