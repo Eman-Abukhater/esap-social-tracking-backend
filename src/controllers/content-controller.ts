@@ -96,3 +96,61 @@ export async function createContentItem(req: Request, res: Response) {
     });
   }
 }
+export async function updateContentStatus(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const { status, changedById } = req.body;
+
+    if (!status || !changedById) {
+      return res.status(400).json({
+        message: "Status and changedById are required",
+      });
+    }
+
+    const currentContentItem = await prisma.contentItem.findUnique({
+      where: { id },
+    });
+
+    if (!currentContentItem) {
+      return res.status(404).json({
+        message: "Content item not found",
+      });
+    }
+
+    const updatedContentItem = await prisma.contentItem.update({
+      where: { id },
+      data: {
+        status,
+        publishedDate:
+          status === "published" ? new Date() : currentContentItem.publishedDate,
+      },
+      include: {
+        product: true,
+        createdBy: true,
+        assignedTo: true,
+      },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        entityType: "content",
+        entityId: updatedContentItem.id,
+        contentItemId: updatedContentItem.id,
+        action: "status_changed",
+        previousValue: {
+          status: currentContentItem.status,
+        },
+        newValue: {
+          status: updatedContentItem.status,
+        },
+        changedById,
+      },
+    });
+
+    res.json(updatedContentItem);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update content status",
+    });
+  }
+}
