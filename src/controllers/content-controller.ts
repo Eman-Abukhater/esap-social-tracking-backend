@@ -1,14 +1,36 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 
-export async function getContentItems(_req: Request, res: Response) {
+export async function getContentItems(req: Request, res: Response) {
   try {
+    const { search, productId, status, platform } = req.query;
+
     const contentItems = await prisma.contentItem.findMany({
+      where: {
+        title: search
+          ? {
+              contains: String(search),
+              mode: "insensitive",
+            }
+          : undefined,
+
+        productId: productId ? String(productId) : undefined,
+
+        status: status ? (String(status) as any) : undefined,
+
+        platforms: platform
+          ? {
+              has: String(platform) as any,
+            }
+          : undefined,
+      },
+
       include: {
         product: true,
         createdBy: true,
         assignedTo: true,
       },
+
       orderBy: {
         createdAt: "desc",
       },
