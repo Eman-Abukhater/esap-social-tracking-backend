@@ -154,3 +154,164 @@ export async function updateContentStatus(req: Request, res: Response) {
     });
   }
 }
+export async function updateContentItem(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const { changedById, ...updateData } = req.body;
+
+    if (!changedById) {
+      return res.status(400).json({
+        message: "changedById is required",
+      });
+    }
+
+    const currentContentItem = await prisma.contentItem.findUnique({
+      where: { id },
+    });
+
+    if (!currentContentItem) {
+      return res.status(404).json({
+        message: "Content item not found",
+      });
+    }
+
+    const updatedContentItem = await prisma.contentItem.update({
+      where: { id },
+      data: {
+        ...updateData,
+        scheduledDate: updateData.scheduledDate
+          ? new Date(updateData.scheduledDate)
+          : undefined,
+      },
+      include: {
+        product: true,
+        createdBy: true,
+        assignedTo: true,
+      },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        entityType: "content",
+        entityId: updatedContentItem.id,
+        contentItemId: updatedContentItem.id,
+        action: "updated",
+        previousValue: currentContentItem,
+        newValue: updateData,
+        changedById,
+      },
+    });
+
+    res.json(updatedContentItem);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update content item",
+    });
+  }
+}
+
+export async function assignContentItem(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const { assignedToId, changedById } = req.body;
+
+    if (!assignedToId || !changedById) {
+      return res.status(400).json({
+        message: "assignedToId and changedById are required",
+      });
+    }
+
+    const currentContentItem = await prisma.contentItem.findUnique({
+      where: { id },
+    });
+
+    if (!currentContentItem) {
+      return res.status(404).json({
+        message: "Content item not found",
+      });
+    }
+
+    const updatedContentItem = await prisma.contentItem.update({
+      where: { id },
+      data: {
+        assignedToId,
+      },
+      include: {
+        product: true,
+        createdBy: true,
+        assignedTo: true,
+      },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        entityType: "content",
+        entityId: updatedContentItem.id,
+        contentItemId: updatedContentItem.id,
+        action: "assigned",
+        previousValue: {
+          assignedToId: currentContentItem.assignedToId,
+        },
+        newValue: {
+          assignedToId,
+        },
+        changedById,
+      },
+    });
+
+    res.json(updatedContentItem);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to assign content item",
+    });
+  }
+}
+
+export async function deleteContentItem(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const { changedById } = req.body;
+
+    if (!changedById) {
+      return res.status(400).json({
+        message: "changedById is required",
+      });
+    }
+
+    const currentContentItem = await prisma.contentItem.findUnique({
+      where: { id },
+    });
+
+    if (!currentContentItem) {
+      return res.status(404).json({
+        message: "Content item not found",
+      });
+    }
+
+    await prisma.activityLog.create({
+      data: {
+        entityType: "content",
+        entityId: currentContentItem.id,
+        contentItemId: currentContentItem.id,
+        action: "deleted",
+        previousValue: {
+          title: currentContentItem.title,
+          status: currentContentItem.status,
+        },
+        changedById,
+      },
+    });
+
+    await prisma.contentItem.delete({
+      where: { id },
+    });
+
+    res.json({
+      message: "Content item deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to delete content item",
+    });
+  }
+}
