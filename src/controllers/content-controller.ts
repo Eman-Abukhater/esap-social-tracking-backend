@@ -3,15 +3,22 @@ import { prisma } from "../lib/prisma";
 
 export async function getContentItems(req: Request, res: Response) {
   try {
-    const { search, productId, status, platform } = req.query;
-
+    const {
+      search,
+      productId,
+      status,
+      platform,
+      assignedToId,
+      startDate,
+      endDate,
+    } = req.query;
     const contentItems = await prisma.contentItem.findMany({
       where: {
         title: search
           ? {
-              contains: String(search),
-              mode: "insensitive",
-            }
+            contains: String(search),
+            mode: "insensitive",
+          }
           : undefined,
 
         productId: productId ? String(productId) : undefined,
@@ -20,9 +27,19 @@ export async function getContentItems(req: Request, res: Response) {
 
         platforms: platform
           ? {
-              has: String(platform) as any,
-            }
+            has: String(platform) as any,
+          }
           : undefined,
+
+        assignedToId: assignedToId ? String(assignedToId) : undefined,
+
+        scheduledDate:
+          startDate || endDate
+            ? {
+              gte: startDate ? new Date(String(startDate)) : undefined,
+              lte: endDate ? new Date(String(endDate)) : undefined,
+            }
+            : undefined,
       },
 
       include: {
