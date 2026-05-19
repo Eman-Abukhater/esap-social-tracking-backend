@@ -12,8 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
-app.use("/content-items", contentRoutes);
-app.get("/", (_req, res) => {
+app.use("/content", contentRoutes);app.get("/", (_req, res) => {
   res.send("ESAP Backend Running");
 });
 

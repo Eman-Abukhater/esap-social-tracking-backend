@@ -1,8 +1,12 @@
 import { Router } from "express";
-import { getContentItems } from "../controllers/content-controller";
+import {
+  createContentItem,
+  getContentItems,
+} from "../controllers/content-controller";
 
 const router = Router();
 
 router.get("/", getContentItems);
+router.post("/", createContentItem);
 
 export default router;
