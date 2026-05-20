@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 
 export async function getContentItems(req: Request, res: Response) {
