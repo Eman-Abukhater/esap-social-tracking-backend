@@ -5,6 +5,7 @@ import userRoutes from "./routes/user-routes";
 import productRoutes from "./routes/product-routes";
 import contentRoutes from "./routes/content-routes";
 import activityRoutes from "./routes/activity-routes";
+import dashboardRoutes from "./routes/dashboard-routes";
 dotenv.config();
 
 const app = express();
@@ -17,6 +18,7 @@ app.use("/content", contentRoutes);app.get("/", (_req, res) => {
   res.send("ESAP Backend Running");
 });
 app.use("/activity", activityRoutes);
+app.use("/dashboard", dashboardRoutes);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
