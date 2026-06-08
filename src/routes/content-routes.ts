@@ -7,14 +7,25 @@ import {
   updateContentItem,
   updateContentStatus,
 } from "../controllers/content-controller";
+import { loadActingUser, requireRole } from "../middlewares/rbac";
 
 const router = Router();
 
 router.get("/", getContentItems);
-router.post("/", createContentItem);
-router.patch("/:id/status", updateContentStatus);
-router.patch("/:id/assign", assignContentItem);
-router.patch("/:id", updateContentItem);
-router.delete("/:id", deleteContentItem);
+router.post("/", loadActingUser, createContentItem);
+router.patch("/:id/status", loadActingUser, updateContentStatus);
+router.patch(
+  "/:id/assign",
+  loadActingUser,
+  requireRole("admin", "manager"),
+  assignContentItem
+);
+router.patch("/:id", loadActingUser, updateContentItem);
+router.delete(
+  "/:id",
+  loadActingUser,
+  requireRole("admin", "manager"),
+  deleteContentItem
+);
 
 export default router;
