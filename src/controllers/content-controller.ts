@@ -12,53 +12,47 @@ export async function getContentItems(req: Request, res: Response) {
       assignedToId,
       startDate,
       endDate,
+      page: pageParam,
+      pageSize: pageSizeParam,
     } = req.query;
-    const contentItems = await prisma.contentItem.findMany({
-      where: {
-        title: search
+
+    const where = {
+      title: search
+        ? { contains: String(search), mode: "insensitive" as const }
+        : undefined,
+      productId: productId ? String(productId) : undefined,
+      status: status ? (String(status) as any) : undefined,
+      platforms: platform ? { has: String(platform) as any } : undefined,
+      assignedToId: assignedToId ? String(assignedToId) : undefined,
+      scheduledDate:
+        startDate || endDate
           ? {
-            contains: String(search),
-            mode: "insensitive",
-          }
-          : undefined,
-
-        productId: productId ? String(productId) : undefined,
-
-        status: status ? (String(status) as any) : undefined,
-
-        platforms: platform
-          ? {
-            has: String(platform) as any,
-          }
-          : undefined,
-
-        assignedToId: assignedToId ? String(assignedToId) : undefined,
-
-        scheduledDate:
-          startDate || endDate
-            ? {
               gte: startDate ? new Date(String(startDate)) : undefined,
               lte: endDate ? new Date(String(endDate)) : undefined,
             }
-            : undefined,
-      },
+          : undefined,
+    };
 
-      include: {
-        product: true,
-        createdBy: true,
-        assignedTo: true,
-      },
+    const include = { product: true, createdBy: true, assignedTo: true };
+    const orderBy = { createdAt: "desc" as const };
 
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    if (pageParam !== undefined) {
+      const page = Math.max(1, parseInt(String(pageParam), 10) || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(String(pageSizeParam), 10) || 20));
+      const skip = (page - 1) * pageSize;
 
+      const [items, total] = await Promise.all([
+        prisma.contentItem.findMany({ where, include, orderBy, take: pageSize, skip }),
+        prisma.contentItem.count({ where }),
+      ]);
+
+      return res.json({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
+    }
+
+    const contentItems = await prisma.contentItem.findMany({ where, include, orderBy });
     res.json(contentItems);
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch content items",
-    });
+    res.status(500).json({ message: "Failed to fetch content items" });
   }
 }
 
