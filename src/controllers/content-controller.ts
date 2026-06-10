@@ -37,8 +37,8 @@ export async function getContentItems(req: Request, res: Response) {
     const orderBy = { createdAt: "desc" as const };
 
     if (pageParam !== undefined) {
-      const page = Math.max(1, parseInt(String(pageParam), 10) || 1);
-      const pageSize = Math.min(100, Math.max(1, parseInt(String(pageSizeParam), 10) || 20));
+      const page = Math.max(1, Number(pageParam) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(pageSizeParam) || 20));
       const skip = (page - 1) * pageSize;
 
       const [items, total] = await Promise.all([
@@ -73,20 +73,6 @@ export async function createContentItem(req: Request, res: Response) {
       notes,
     } = req.body;
 
-    if (
-      !title ||
-      !description ||
-      !type ||
-      !productId ||
-      !createdById ||
-      !assignedToId ||
-      !priority
-    ) {
-      return res.status(400).json({
-        message: "Missing required fields",
-      });
-    }
-
     const contentItem = await prisma.contentItem.create({
       data: {
         title,
@@ -98,9 +84,9 @@ export async function createContentItem(req: Request, res: Response) {
         createdById,
         assignedToId,
         priority,
-        tags: tags || [],
-        mediaUrl,
-        notes,
+        tags: tags ?? [],
+        mediaUrl: mediaUrl || null,
+        notes: notes || null,
       },
       include: {
         product: true,
@@ -125,30 +111,19 @@ export async function createContentItem(req: Request, res: Response) {
 
     res.status(201).json(contentItem);
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to create content item",
-    });
+    res.status(500).json({ message: "Failed to create content item" });
   }
 }
+
 export async function updateContentStatus(req: Request, res: Response) {
   try {
     const id = req.params.id as string;
     const { status, changedById } = req.body;
 
-    if (!status || !changedById) {
-      return res.status(400).json({
-        message: "Status and changedById are required",
-      });
-    }
-
-    const currentContentItem = await prisma.contentItem.findUnique({
-      where: { id },
-    });
+    const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
     if (!currentContentItem) {
-      return res.status(404).json({
-        message: "Content item not found",
-      });
+      return res.status(404).json({ message: "Content item not found" });
     }
 
     const updatedContentItem = await prisma.contentItem.update({
@@ -158,11 +133,7 @@ export async function updateContentStatus(req: Request, res: Response) {
         publishedDate:
           status === "published" ? new Date() : currentContentItem.publishedDate,
       },
-      include: {
-        product: true,
-        createdBy: true,
-        assignedTo: true,
-      },
+      include: { product: true, createdBy: true, assignedTo: true },
     });
 
     await prisma.activityLog.create({
@@ -171,53 +142,33 @@ export async function updateContentStatus(req: Request, res: Response) {
         entityId: updatedContentItem.id,
         contentItemId: updatedContentItem.id,
         action: "status_changed",
-        previousValue: {
-          status: currentContentItem.status,
-        },
-        newValue: {
-          status: updatedContentItem.status,
-        },
+        previousValue: { status: currentContentItem.status },
+        newValue: { status: updatedContentItem.status },
         changedById,
       },
     });
 
     res.json(updatedContentItem);
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to update content status",
-    });
+    res.status(500).json({ message: "Failed to update content status" });
   }
 }
+
 function toJsonValue(value: unknown): Prisma.InputJsonValue {
-  if (value === null || value === undefined) {
-    return "";
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date) return value.toISOString();
   return value as Prisma.InputJsonValue;
 }
+
 export async function updateContentItem(req: Request, res: Response) {
   try {
     const id = req.params.id as string;
     const { changedById, ...updateData } = req.body;
 
-    if (!changedById) {
-      return res.status(400).json({
-        message: "changedById is required",
-      });
-    }
-
-    const currentContentItem = await prisma.contentItem.findUnique({
-      where: { id },
-    });
+    const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
     if (!currentContentItem) {
-      return res.status(404).json({
-        message: "Content item not found",
-      });
+      return res.status(404).json({ message: "Content item not found" });
     }
 
     const previousValue: Record<string, Prisma.InputJsonValue> = {};
@@ -225,7 +176,6 @@ export async function updateContentItem(req: Request, res: Response) {
 
     Object.keys(updateData).forEach((key) => {
       const typedKey = key as keyof typeof currentContentItem;
-
       const oldValue = currentContentItem[typedKey];
       const newFieldValue = updateData[key];
 
@@ -236,9 +186,7 @@ export async function updateContentItem(req: Request, res: Response) {
     });
 
     if (Object.keys(newValue).length === 0) {
-      return res.status(400).json({
-        message: "No changes detected",
-      });
+      return res.status(400).json({ message: "No changes detected" });
     }
 
     const updatedContentItem = await prisma.contentItem.update({
@@ -247,13 +195,12 @@ export async function updateContentItem(req: Request, res: Response) {
         ...updateData,
         scheduledDate: updateData.scheduledDate
           ? new Date(updateData.scheduledDate)
+          : updateData.scheduledDate === null
+          ? null
           : undefined,
+        mediaUrl: updateData.mediaUrl === "" ? null : updateData.mediaUrl,
       },
-      include: {
-        product: true,
-        createdBy: true,
-        assignedTo: true,
-      },
+      include: { product: true, createdBy: true, assignedTo: true },
     });
 
     await prisma.activityLog.create({
@@ -270,9 +217,7 @@ export async function updateContentItem(req: Request, res: Response) {
 
     res.json(updatedContentItem);
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to update content item",
-    });
+    res.status(500).json({ message: "Failed to update content item" });
   }
 }
 
@@ -281,32 +226,16 @@ export async function assignContentItem(req: Request, res: Response) {
     const id = req.params.id as string;
     const { assignedToId, changedById } = req.body;
 
-    if (!assignedToId || !changedById) {
-      return res.status(400).json({
-        message: "assignedToId and changedById are required",
-      });
-    }
-
-    const currentContentItem = await prisma.contentItem.findUnique({
-      where: { id },
-    });
+    const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
     if (!currentContentItem) {
-      return res.status(404).json({
-        message: "Content item not found",
-      });
+      return res.status(404).json({ message: "Content item not found" });
     }
 
     const updatedContentItem = await prisma.contentItem.update({
       where: { id },
-      data: {
-        assignedToId,
-      },
-      include: {
-        product: true,
-        createdBy: true,
-        assignedTo: true,
-      },
+      data: { assignedToId },
+      include: { product: true, createdBy: true, assignedTo: true },
     });
 
     await prisma.activityLog.create({
@@ -315,21 +244,15 @@ export async function assignContentItem(req: Request, res: Response) {
         entityId: updatedContentItem.id,
         contentItemId: updatedContentItem.id,
         action: "assigned",
-        previousValue: {
-          assignedToId: currentContentItem.assignedToId,
-        },
-        newValue: {
-          assignedToId,
-        },
+        previousValue: { assignedToId: currentContentItem.assignedToId },
+        newValue: { assignedToId },
         changedById,
       },
     });
 
     res.json(updatedContentItem);
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to assign content item",
-    });
+    res.status(500).json({ message: "Failed to assign content item" });
   }
 }
 
@@ -338,20 +261,10 @@ export async function deleteContentItem(req: Request, res: Response) {
     const id = req.params.id as string;
     const { changedById } = req.body;
 
-    if (!changedById) {
-      return res.status(400).json({
-        message: "changedById is required",
-      });
-    }
-
-    const currentContentItem = await prisma.contentItem.findUnique({
-      where: { id },
-    });
+    const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
     if (!currentContentItem) {
-      return res.status(404).json({
-        message: "Content item not found",
-      });
+      return res.status(404).json({ message: "Content item not found" });
     }
 
     await prisma.activityLog.create({
@@ -368,16 +281,10 @@ export async function deleteContentItem(req: Request, res: Response) {
       },
     });
 
-    await prisma.contentItem.delete({
-      where: { id },
-    });
+    await prisma.contentItem.delete({ where: { id } });
 
-    res.json({
-      message: "Content item deleted successfully",
-    });
+    res.json({ message: "Content item deleted successfully" });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to delete content item",
-    });
+    res.status(500).json({ message: "Failed to delete content item" });
   }
 }
