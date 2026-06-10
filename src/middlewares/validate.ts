@@ -22,8 +22,14 @@ export function validate(schema: ZodSchema, source: Source = "body") {
       return;
     }
 
-    // Replace with coerced/defaulted data (e.g. tags defaults to [])
-    (req as unknown as Record<string, unknown>)[source] = result.data;
+    // Express 5: req.query is a getter-only on the prototype — use defineProperty
+    // to shadow it with a writable own property so coerced values are visible.
+    Object.defineProperty(req, source, {
+      value: result.data,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
     next();
   };
 }
