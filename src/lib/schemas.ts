@@ -74,6 +74,7 @@ export const UpdateContentBodySchema = z
     mediaUrl: optionalUrl,
     notes: z.string().optional(),
     tags: z.array(z.string()).optional(),
+    order: z.number().optional(),
   })
   .refine(
     (data) => {

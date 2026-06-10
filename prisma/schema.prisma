@@ -97,6 +97,7 @@ model ContentItem {
   tags          String[]
   mediaUrl      String?
   notes         String?
+  order         Float         @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -110,6 +111,7 @@ model ContentItem {
   @@index([status])
   @@index([assignedToId])
   @@index([createdAt])
+  @@index([order])
 }
 
 model ActivityLog {

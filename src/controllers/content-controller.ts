@@ -34,7 +34,7 @@ export async function getContentItems(req: Request, res: Response) {
     };
 
     const include = { product: true, createdBy: true, assignedTo: true };
-    const orderBy = { createdAt: "desc" as const };
+    const orderBy = [{ order: "asc" as const }, { createdAt: "desc" as const }];
 
     if (pageParam !== undefined) {
       const page = Math.max(1, Number(pageParam) || 1);
@@ -73,6 +73,9 @@ export async function createContentItem(req: Request, res: Response) {
       notes,
     } = req.body;
 
+    const maxResult = await prisma.contentItem.aggregate({ _max: { order: true } });
+    const nextOrder = (maxResult._max.order ?? 0) + 1000;
+
     const contentItem = await prisma.contentItem.create({
       data: {
         title,
@@ -87,6 +90,7 @@ export async function createContentItem(req: Request, res: Response) {
         tags: tags ?? [],
         mediaUrl: mediaUrl || null,
         notes: notes || null,
+        order: nextOrder,
       },
       include: {
         product: true,
