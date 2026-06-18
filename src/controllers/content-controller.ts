@@ -1,6 +1,8 @@
+import { z } from "zod";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../lib/async-handler";
+import { GetContentQuerySchema } from "../lib/schemas";
 
 export const getContentItems = asyncHandler(async (req, res) => {
   const {
@@ -13,21 +15,19 @@ export const getContentItems = asyncHandler(async (req, res) => {
     endDate,
     page: pageParam,
     pageSize: pageSizeParam,
-  } = req.query;
+  } = req.query as z.infer<typeof GetContentQuerySchema>;
 
   const where = {
-    title: search
-      ? { contains: String(search), mode: "insensitive" as const }
-      : undefined,
-    productId: productId ? String(productId) : undefined,
-    status: status ? (String(status) as any) : undefined,
-    platforms: platform ? { has: String(platform) as any } : undefined,
-    assignedToId: assignedToId ? String(assignedToId) : undefined,
+    title: search ? { contains: search, mode: "insensitive" as const } : undefined,
+    productId: productId ?? undefined,
+    status: status ?? undefined,
+    platforms: platform ? { has: platform } : undefined,
+    assignedToId: assignedToId ?? undefined,
     scheduledDate:
       startDate || endDate
         ? {
-            gte: startDate ? new Date(String(startDate)) : undefined,
-            lte: endDate ? new Date(String(endDate)) : undefined,
+            gte: startDate ? new Date(startDate) : undefined,
+            lte: endDate ? new Date(endDate) : undefined,
           }
         : undefined,
   };
@@ -36,8 +36,8 @@ export const getContentItems = asyncHandler(async (req, res) => {
   const orderBy = [{ order: "asc" as const }, { createdAt: "desc" as const }];
 
   if (pageParam !== undefined) {
-    const page = Math.max(1, Number(pageParam) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(pageSizeParam) || 20));
+    const page = pageParam;
+    const pageSize = pageSizeParam ?? 20;
     const skip = (page - 1) * pageSize;
 
     const [items, total] = await Promise.all([
@@ -155,6 +155,16 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
 
+function normalizeForComparison(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (Array.isArray(value)) return JSON.stringify([...value].sort());
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+  return String(value);
+}
+
 export const updateContentItem = asyncHandler(async (req, res) => {
   const id = req.params.id as string;
   const { changedById, ...updateData } = req.body;
@@ -181,7 +191,7 @@ export const updateContentItem = asyncHandler(async (req, res) => {
     const oldValue = currentContentItem[typedKey];
     const newFieldValue = updateData[key];
 
-    if (String(oldValue) !== String(newFieldValue)) {
+    if (normalizeForComparison(oldValue) !== normalizeForComparison(newFieldValue)) {
       previousValue[key] = toJsonValue(oldValue);
       newValue[key] = toJsonValue(newFieldValue);
     }

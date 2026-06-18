@@ -97,6 +97,8 @@ model ContentItem {
   tags          String[]
   mediaUrl      String?
   notes         String?
+  // Fractional ordering: repeated bisection between two rows will eventually exhaust float precision.
+  // If the gap becomes too small, a periodic rebalance (reassigning order values) will be needed.
   order         Float         @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
