@@ -1,18 +1,8 @@
-import { Request, Response } from "express";
 import { getDashboardStats } from "../services/analytics-service";
+import { asyncHandler } from "../lib/async-handler";
 
-export async function getDashboardStatsHandler(req: Request, res: Response) {
-  try {
-    const { productId } = req.query;
-
-    const stats = await getDashboardStats(
-      productId ? String(productId) : undefined
-    );
-
-    res.json(stats);
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch dashboard stats",
-    });
-  }
-}
+export const getDashboardStatsHandler = asyncHandler(async (req, res) => {
+  const { productId } = req.query;
+  const stats = await getDashboardStats(productId ? String(productId) : undefined);
+  res.json(stats);
+});

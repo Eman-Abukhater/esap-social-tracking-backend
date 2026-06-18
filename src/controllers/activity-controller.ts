@@ -1,34 +1,18 @@
-import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { asyncHandler } from "../lib/async-handler";
 
-export async function getActivityLogs(req: Request, res: Response) {
-  try {
-    const { userId, productId, contentId } = req.query;
+export const getActivityLogs = asyncHandler(async (req, res) => {
+  const { userId, productId, contentId } = req.query;
 
-    const activityLogs = await prisma.activityLog.findMany({
-      where: {
-        changedById: userId ? String(userId) : undefined,
+  const activityLogs = await prisma.activityLog.findMany({
+    where: {
+      changedById: userId ? String(userId) : undefined,
+      contentItemId: contentId ? String(contentId) : undefined,
+      contentItem: productId ? { productId: String(productId) } : undefined,
+    },
+    include: { changedBy: true, contentItem: true },
+    orderBy: { timestamp: "desc" },
+  });
 
-        contentItemId: contentId ? String(contentId) : undefined,
-
-        contentItem: productId
-          ? { productId: String(productId) }
-          : undefined,
-      },
-
-      include: {
-        changedBy: true,
-        contentItem: true,
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
-
-    res.json(activityLogs);
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch activity logs",
-    });
-  }
-}
+  res.json(activityLogs);
+});

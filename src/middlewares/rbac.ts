@@ -39,6 +39,7 @@ export async function loadActingUser(req: Request, res: Response, next: NextFunc
     req.actingUser = actingUser;
     next();
   } catch (error) {
+    console.error("loadActingUser failed", { error, actingUserId: req.body?.changedById ?? req.body?.createdById });
     res.status(500).json({
       message: "Failed to verify acting user",
     });
