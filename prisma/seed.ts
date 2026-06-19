@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../generated/prisma/client";
@@ -13,21 +14,26 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
+  const hash = (pw: string) => bcrypt.hashSync(pw, 10);
+
   await prisma.user.createMany({
     data: [
       {
         name: "Ahmed",
         email: "ahmed@esap.ai",
+        passwordHash: hash("ahmed123"),
         role: "manager",
       },
       {
         name: "Sarah",
         email: "sarah@esap.ai",
+        passwordHash: hash("sarah123"),
         role: "contributor",
       },
       {
         name: "Omar",
         email: "omar@esap.ai",
+        passwordHash: hash("omar123"),
         role: "admin",
       },
     ],

@@ -1,8 +1,8 @@
-import { z } from "zod";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../lib/async-handler";
 import { GetContentQuerySchema } from "../lib/schemas";
+import { z } from "zod";
 
 export const getContentItems = asyncHandler(async (req, res) => {
   const {
@@ -53,6 +53,7 @@ export const getContentItems = asyncHandler(async (req, res) => {
 });
 
 export const createContentItem = asyncHandler(async (req, res) => {
+  const actingUserId = req.actingUser!.id;
   const {
     title,
     description,
@@ -60,7 +61,6 @@ export const createContentItem = asyncHandler(async (req, res) => {
     productId,
     platforms,
     scheduledDate,
-    createdById,
     assignedToId,
     priority,
     tags,
@@ -80,7 +80,7 @@ export const createContentItem = asyncHandler(async (req, res) => {
         productId,
         platforms,
         scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-        createdById,
+        createdById: actingUserId,
         assignedToId,
         priority,
         tags: tags ?? [],
@@ -99,7 +99,7 @@ export const createContentItem = asyncHandler(async (req, res) => {
       contentItemId: contentItem.id,
       action: "created",
       newValue: { title: contentItem.title, status: contentItem.status },
-      changedById: createdById,
+      changedById: actingUserId,
     },
   });
 
@@ -108,7 +108,8 @@ export const createContentItem = asyncHandler(async (req, res) => {
 
 export const updateContentStatus = asyncHandler(async (req, res) => {
   const id = req.params.id as string;
-  const { status, changedById } = req.body;
+  const actingUserId = req.actingUser!.id;
+  const { status } = req.body;
 
   const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
@@ -142,7 +143,7 @@ export const updateContentStatus = asyncHandler(async (req, res) => {
       action: "status_changed",
       previousValue: { status: currentContentItem.status },
       newValue: { status: updatedContentItem.status },
-      changedById,
+      changedById: actingUserId,
     },
   });
 
@@ -167,7 +168,8 @@ function normalizeForComparison(value: unknown): string {
 
 export const updateContentItem = asyncHandler(async (req, res) => {
   const id = req.params.id as string;
-  const { changedById, ...updateData } = req.body;
+  const actingUserId = req.actingUser!.id;
+  const updateData = req.body;
 
   const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
@@ -223,7 +225,7 @@ export const updateContentItem = asyncHandler(async (req, res) => {
       action: "updated",
       previousValue,
       newValue,
-      changedById,
+      changedById: actingUserId,
     },
   });
 
@@ -232,7 +234,8 @@ export const updateContentItem = asyncHandler(async (req, res) => {
 
 export const assignContentItem = asyncHandler(async (req, res) => {
   const id = req.params.id as string;
-  const { assignedToId, changedById } = req.body;
+  const actingUserId = req.actingUser!.id;
+  const { assignedToId } = req.body;
 
   const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
@@ -254,7 +257,7 @@ export const assignContentItem = asyncHandler(async (req, res) => {
       action: "assigned",
       previousValue: { assignedToId: currentContentItem.assignedToId },
       newValue: { assignedToId },
-      changedById,
+      changedById: actingUserId,
     },
   });
 
@@ -263,7 +266,7 @@ export const assignContentItem = asyncHandler(async (req, res) => {
 
 export const deleteContentItem = asyncHandler(async (req, res) => {
   const id = req.params.id as string;
-  const { changedById } = req.body;
+  const actingUserId = req.actingUser!.id;
 
   const currentContentItem = await prisma.contentItem.findUnique({ where: { id } });
 
@@ -286,7 +289,7 @@ export const deleteContentItem = asyncHandler(async (req, res) => {
       contentItemId: currentContentItem.id,
       action: "deleted",
       previousValue: { title: currentContentItem.title, status: currentContentItem.status },
-      changedById,
+      changedById: actingUserId,
     },
   });
 

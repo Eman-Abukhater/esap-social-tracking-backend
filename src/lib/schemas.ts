@@ -49,7 +49,6 @@ export const CreateContentBodySchema = z.object({
   productId: idField,
   platforms: z.array(PlatformSchema).min(1, "At least one platform is required"),
   scheduledDate: dateString.optional().nullable(),
-  createdById: idField,
   assignedToId: idField,
   priority: PrioritySchema,
   tags: z.array(z.string()).optional().default([]),
@@ -59,12 +58,10 @@ export const CreateContentBodySchema = z.object({
 
 export const UpdateStatusBodySchema = z.object({
   status: ContentStatusSchema,
-  changedById: idField,
 });
 
 export const UpdateContentBodySchema = z
   .object({
-    changedById: idField,
     title: z.string().min(1).max(255).optional(),
     description: z.string().optional(),
     type: ContentTypeSchema.optional(),
@@ -77,22 +74,15 @@ export const UpdateContentBodySchema = z
     order: z.number().optional(),
   })
   .refine(
-    (data) => {
-      const { changedById, ...rest } = data;
-      void changedById;
-      return Object.keys(rest).length > 0;
-    },
+    (data) => Object.keys(data).length > 0,
     { message: "At least one field to update is required" }
   );
 
 export const AssignContentBodySchema = z.object({
   assignedToId: idField,
-  changedById: idField,
 });
 
-export const DeleteContentBodySchema = z.object({
-  changedById: idField,
-});
+export const DeleteContentBodySchema = z.object({});
 
 // ── Query schemas ─────────────────────────────────────────────────────────────
 
@@ -105,7 +95,7 @@ export const GetContentQuerySchema = z.object({
   startDate: dateString.optional(),
   endDate: dateString.optional(),
   page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  pageSize: z.coerce.number().int().max(100).optional(),
 });
 
 export const GetActivityQuerySchema = z.object({
