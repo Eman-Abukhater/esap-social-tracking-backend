@@ -49,7 +49,9 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 export const logout = asyncHandler(async (_req, res) => {
-  res.clearCookie("token", { path: "/" });
+  const { maxAge, ...clearOptions } = getCookieOptions();
+  void maxAge;
+  res.clearCookie("token", clearOptions);
   res.json({ message: "Logged out" });
 });
 
