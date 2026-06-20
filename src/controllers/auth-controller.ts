@@ -6,13 +6,16 @@ import type { JwtPayload } from "../middlewares/auth";
 
 const TOKEN_EXPIRY = "8h";
 
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? ("strict" as const) : ("lax" as const),
-  maxAge: 8 * 60 * 60 * 1000,
-  path: "/",
-};
+function getCookieOptions() {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? ("none" as const) : ("lax" as const),
+    maxAge: 8 * 60 * 60 * 1000,
+    path: "/",
+  };
+}
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -35,7 +38,7 @@ export const login = asyncHandler(async (req, res) => {
   const payload: JwtPayload = { userId: user.id, role: user.role };
   const token = jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: TOKEN_EXPIRY });
 
-  res.cookie("token", token, COOKIE_OPTIONS);
+  res.cookie("token", token, getCookieOptions());
   res.json({
     id: user.id,
     name: user.name,
