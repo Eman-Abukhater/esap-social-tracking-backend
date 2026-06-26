@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import { logger } from "./lib/logger";
 import { requireAuth } from "./middlewares/auth";
 import authRoutes from "./routes/auth-routes";
 import userRoutes from "./routes/user-routes";
@@ -40,5 +41,5 @@ app.use("/dashboard", dashboardRoutes);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info({ port: PORT }, "Server running");
 });

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { UserRole } from "../generated/prisma/client";
+import { env } from "../lib/env";
 
 export interface JwtPayload {
   userId: string;
@@ -15,7 +16,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
     req.actingUser = { id: payload.userId, role: payload.role };
     next();
   } catch {

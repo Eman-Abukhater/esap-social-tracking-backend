@@ -1,8 +1,17 @@
-import { Prisma } from "../generated/prisma/client";
+import { Prisma, ContentItem } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../lib/async-handler";
 import { GetContentQuerySchema } from "../lib/schemas";
 import { z } from "zod";
+
+function canMutateContent(
+  user: { id: string; role: string } | undefined,
+  item: Pick<ContentItem, "createdById" | "assignedToId">
+): boolean {
+  if (!user) return false;
+  if (user.role === "admin" || user.role === "manager") return true;
+  return item.createdById === user.id || item.assignedToId === user.id;
+}
 
 export const getContentItems = asyncHandler(async (req, res) => {
   const {
@@ -48,7 +57,8 @@ export const getContentItems = asyncHandler(async (req, res) => {
     return res.json({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
   }
 
-  const contentItems = await prisma.contentItem.findMany({ where, include, orderBy });
+  // No page param: return flat array with a ceiling to prevent runaway queries
+  const contentItems = await prisma.contentItem.findMany({ where, include, orderBy, take: 500 });
   res.json(contentItems);
 });
 
@@ -117,11 +127,7 @@ export const updateContentStatus = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Content item not found" });
   }
 
-  const isPrivileged = req.actingUser?.role === "admin" || req.actingUser?.role === "manager";
-  const isOwner =
-    currentContentItem.createdById === req.actingUser?.id ||
-    currentContentItem.assignedToId === req.actingUser?.id;
-  if (!isPrivileged && !isOwner) {
+  if (!canMutateContent(req.actingUser, currentContentItem)) {
     return res.status(403).json({ message: "You do not have permission to edit this item" });
   }
 
@@ -177,11 +183,7 @@ export const updateContentItem = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Content item not found" });
   }
 
-  const isPrivileged = req.actingUser?.role === "admin" || req.actingUser?.role === "manager";
-  const isOwner =
-    currentContentItem.createdById === req.actingUser?.id ||
-    currentContentItem.assignedToId === req.actingUser?.id;
-  if (!isPrivileged && !isOwner) {
+  if (!canMutateContent(req.actingUser, currentContentItem)) {
     return res.status(403).json({ message: "You do not have permission to edit this item" });
   }
 
@@ -274,11 +276,7 @@ export const deleteContentItem = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Content item not found" });
   }
 
-  const isPrivileged = req.actingUser?.role === "admin" || req.actingUser?.role === "manager";
-  const isOwner =
-    currentContentItem.createdById === req.actingUser?.id ||
-    currentContentItem.assignedToId === req.actingUser?.id;
-  if (!isPrivileged && !isOwner) {
+  if (!canMutateContent(req.actingUser, currentContentItem)) {
     return res.status(403).json({ message: "You do not have permission to delete this item" });
   }
 

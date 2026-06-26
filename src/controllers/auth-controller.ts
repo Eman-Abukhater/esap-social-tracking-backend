@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../lib/async-handler";
+import { env } from "../lib/env";
 import type { JwtPayload } from "../middlewares/auth";
 
 const TOKEN_EXPIRY = "8h";
@@ -20,10 +21,6 @@ function getCookieOptions() {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user || !user.passwordHash) {
@@ -36,7 +33,7 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   const payload: JwtPayload = { userId: user.id, role: user.role };
-  const token = jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: TOKEN_EXPIRY });
+  const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
 
   res.cookie("token", token, getCookieOptions());
   res.json({

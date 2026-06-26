@@ -82,7 +82,20 @@ export const AssignContentBodySchema = z.object({
   assignedToId: idField,
 });
 
-export const DeleteContentBodySchema = z.object({});
+// ── Product body schemas ──────────────────────────────────────────────────────
+
+export const CreateProductBodySchema = z.object({
+  name: z.string().min(1, "Name is required").max(255),
+  description: z.string().min(1, "Description is required"),
+  color: z.string().min(1, "Color is required"),
+});
+
+// ── Auth body schemas ─────────────────────────────────────────────────────────
+
+export const LoginBodySchema = z.object({
+  email: z.string().email("Must be a valid email"),
+  password: z.string().min(1, "Password is required"),
+});
 
 // ── Query schemas ─────────────────────────────────────────────────────────────
 
@@ -102,4 +115,6 @@ export const GetActivityQuerySchema = z.object({
   userId: z.string().optional(),
   productId: z.string().optional(),
   contentId: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().max(100).optional(),
 });

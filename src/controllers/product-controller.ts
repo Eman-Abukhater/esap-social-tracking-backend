@@ -9,11 +9,6 @@ export const getProducts = asyncHandler(async (_req, res) => {
 export const createProduct = asyncHandler(async (req, res) => {
   const { name, description, color } = req.body;
 
-  if (!name || !description || !color) {
-    res.status(400).json({ message: "name, description, and color are required" });
-    return;
-  }
-
   const product = await prisma.product.create({
     data: { name, description, color },
   });
